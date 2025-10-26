@@ -1,2 +1,3 @@
 .venv/
 a1/MNIST_data/
+__pycache__/

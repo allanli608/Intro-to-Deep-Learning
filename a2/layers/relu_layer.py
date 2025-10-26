@@ -13,7 +13,8 @@ class ReLULayer():
         ############################################################################
         # TODO: Put your code here
         # Apply ReLU activation function to Input, and return results.
-
+        self.Output = np.maximum(0, Input)
+        return self.Output
         ############################################################################
 
     def backward(self, delta):
@@ -21,5 +22,6 @@ class ReLULayer():
         ############################################################################
         # TODO: Put your code here
         # Calculate the gradient using the later layer's gradient: delta
-
+        delta *= (self.Output > 0)
+        return delta
         ############################################################################
