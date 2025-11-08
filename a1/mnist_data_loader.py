@@ -29,7 +29,7 @@ from six.moves import urllib
 from six.moves import xrange  # pylint: disable=redefined-builtin
 
 
-SOURCE_URL = 'http://yann.lecun.com/exdb/mnist/'
+SOURCE_URL = "http://yann.lecun.com/exdb/mnist/"
 
 
 def maybe_download(filename, work_directory):
@@ -38,27 +38,26 @@ def maybe_download(filename, work_directory):
         os.makedirs(work_directory)
     filepath = osp.join(work_directory, filename)
     if not osp.exists(filepath):
-        filepath, _ = urllib.request.urlretrieve(
-            SOURCE_URL + filename, filepath)
-        with open(filepath, 'rb') as f:
-            print('Successfully downloaded', filename, 'bytes.')
+        filepath, _ = urllib.request.urlretrieve(SOURCE_URL + filename, filepath)
+        with open(filepath, "rb") as f:
+            print("Successfully downloaded", filename, "bytes.")
     return filepath
 
 
 def _read32(bytestream):
-    dt = np.dtype(np.uint32).newbyteorder('>')
+    dt = np.dtype(np.uint32).newbyteorder(">")
     return np.frombuffer(bytestream.read(4), dtype=dt)[0]
 
 
 def extract_images(filename):
     """Extract the images into a 4D uint8 np array [index, y, x, depth]."""
-    print('Extracting', filename)
-    with open(filename, 'rb') as f, gzip.GzipFile(fileobj=f) as bytestream:
+    print("Extracting", filename)
+    with open(filename, "rb") as f, gzip.GzipFile(fileobj=f) as bytestream:
         magic = _read32(bytestream)
         if magic != 2051:
             raise ValueError(
-                'Invalid magic number %d in MNIST image file: %s' %
-                (magic, filename))
+                "Invalid magic number %d in MNIST image file: %s" % (magic, filename)
+            )
         num_images = _read32(bytestream)
         rows = _read32(bytestream)
         cols = _read32(bytestream)
@@ -79,13 +78,13 @@ def dense_to_one_hot(labels_dense, num_classes=10):
 
 def extract_labels(filename, one_hot=False):
     """Extract the labels into a 1D uint8 np array [index]."""
-    print('Extracting', filename)
-    with open(filename, 'rb') as f, gzip.GzipFile(fileobj=f) as bytestream:
+    print("Extracting", filename)
+    with open(filename, "rb") as f, gzip.GzipFile(fileobj=f) as bytestream:
         magic = _read32(bytestream)
         if magic != 2049:
             raise ValueError(
-                'Invalid magic number %d in MNIST label file: %s' %
-                (magic, filename))
+                "Invalid magic number %d in MNIST label file: %s" % (magic, filename)
+            )
         num_items = _read32(bytestream)
         buf = bytestream.read(num_items)
         labels = np.frombuffer(buf, dtype=np.uint8)
@@ -95,9 +94,9 @@ def extract_labels(filename, one_hot=False):
 
 
 class DataSet(object):
-
-    def __init__(self, images, labels, fake_data=False, one_hot=False,
-                 dtype=np.float32):
+    def __init__(
+        self, images, labels, fake_data=False, one_hot=False, dtype=np.float32
+    ):
         """Construct a DataSet.
 
         one_hot arg is used only if fake_data is true.  `dtype` can be either
@@ -105,22 +104,20 @@ class DataSet(object):
         `[0, 1]`.
         """
         if dtype not in (np.uint8, np.float32):
-            raise TypeError('Invalid image dtype %r, expected uint8 or float32' %
-                            dtype)
+            raise TypeError("Invalid image dtype %r, expected uint8 or float32" % dtype)
         if fake_data:
             self._num_examples = 10000
             self.one_hot = one_hot
         else:
-            assert images.shape[0] == labels.shape[0], (
-                'images.shape: %s labels.shape: %s' % (images.shape,
-                                                       labels.shape))
+            assert (
+                images.shape[0] == labels.shape[0]
+            ), "images.shape: %s labels.shape: %s" % (images.shape, labels.shape)
             self._num_examples = images.shape[0]
 
             # Convert shape from [num examples, rows, columns, depth]
             # to [num examples, rows*columns] (assuming depth == 1)
             assert images.shape[3] == 1
-            images = images.reshape(images.shape[0],
-                                    images.shape[1] * images.shape[2])
+            images = images.reshape(images.shape[0], images.shape[1] * images.shape[2])
             if dtype == np.float32:
                 # Convert from [0, 255] -> [0.0, 1.0].
                 images = images.astype(np.float32)
@@ -155,7 +152,8 @@ class DataSet(object):
             else:
                 fake_label = 0
             return [fake_image for _ in xrange(batch_size)], [
-                fake_label for _ in xrange(batch_size)]
+                fake_label for _ in xrange(batch_size)
+            ]
         start = self._index_in_epoch
         self._index_in_epoch += batch_size
         if self._index_in_epoch > self._num_examples:
@@ -174,23 +172,28 @@ class DataSet(object):
         return self._images[start:end], self._labels[start:end]
 
 
-def read_data_sets(train_dir, fake_data=False, one_hot=False, dtype=np.float32, subset=None):
+def read_data_sets(
+    train_dir, fake_data=False, one_hot=False, dtype=np.float32, subset=None
+):
     class DataSets(object):
         pass
+
     data_sets = DataSets()
 
     if fake_data:
+
         def fake():
             return DataSet([], [], fake_data=True, one_hot=one_hot, dtype=dtype)
+
         data_sets.train = fake()
         data_sets.validation = fake()
         data_sets.test = fake()
         return data_sets
 
-    TRAIN_IMAGES = 'train-images-idx3-ubyte.gz'
-    TRAIN_LABELS = 'train-labels-idx1-ubyte.gz'
-    TEST_IMAGES = 't10k-images-idx3-ubyte.gz'
-    TEST_LABELS = 't10k-labels-idx1-ubyte.gz'
+    TRAIN_IMAGES = "train-images-idx3-ubyte.gz"
+    TRAIN_LABELS = "train-labels-idx1-ubyte.gz"
+    TEST_IMAGES = "t10k-images-idx3-ubyte.gz"
+    TEST_LABELS = "t10k-labels-idx1-ubyte.gz"
     VALIDATION_SIZE = 0
 
     local_file = maybe_download(TRAIN_IMAGES, train_dir)
@@ -211,8 +214,8 @@ def read_data_sets(train_dir, fake_data=False, one_hot=False, dtype=np.float32, 
         ind_train = np.zeros(train_labels.shape[0], dtype=bool)
         ind_test = np.zeros(test_labels.shape[0], dtype=bool)
         for c in subset:
-            ind_train |= (train_labels == c)
-            ind_test |= (test_labels == c)
+            ind_train |= train_labels == c
+            ind_test |= test_labels == c
         train_images = train_images[ind_train]
         train_labels = train_labels[ind_train]
         test_images = test_images[ind_test]
@@ -224,13 +227,11 @@ def read_data_sets(train_dir, fake_data=False, one_hot=False, dtype=np.float32, 
     train_labels = train_labels[VALIDATION_SIZE:]
 
     data_sets.train = DataSet(train_images, train_labels, dtype=dtype)
-    data_sets.validation = DataSet(validation_images, validation_labels,
-                                   dtype=dtype)
+    data_sets.validation = DataSet(validation_images, validation_labels, dtype=dtype)
     data_sets.test = DataSet(test_images, test_labels, dtype=dtype)
 
     return data_sets
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     mnist_dataset = read_data_sets("./MNIST_data/", one_hot=False)
-    

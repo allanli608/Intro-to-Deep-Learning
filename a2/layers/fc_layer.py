@@ -1,8 +1,8 @@
 import numpy as np
 
 
-class FCLayer():
-    def __init__(self, num_input, num_output, actFunction='relu', trainable=True):
+class FCLayer:
+    def __init__(self, num_input, num_output, actFunction="relu", trainable=True):
         """
         Apply a linear transformation to the incoming data: y = Wx + b
         Args:
@@ -15,7 +15,7 @@ class FCLayer():
         self.num_output = num_output
         self.trainable = trainable
         self.actFunction = actFunction
-        assert actFunction in ['relu', 'sigmoid']
+        assert actFunction in ["relu", "sigmoid"]
 
         self.XavierInit()
 
@@ -23,7 +23,6 @@ class FCLayer():
         self.grad_b = np.zeros((1, num_output))
 
     def forward(self, Input):
-
         ############################################################################
         # TODO: Put your code here
         # Apply linear transformation(Wx+b) to Input, and return results.
@@ -46,14 +45,13 @@ class FCLayer():
 
     def XavierInit(self):
         # Initialize the weigths according to the type of activation function.
-        raw_std = (2 / (self.num_input + self.num_output))**0.5
-        if 'relu' == self.actFunction:
+        raw_std = (2 / (self.num_input + self.num_output)) ** 0.5
+        if "relu" == self.actFunction:
             init_std = raw_std * (2**0.5)
-        elif 'sigmoid' == self.actFunction:
+        elif "sigmoid" == self.actFunction:
             init_std = raw_std
         else:
             init_std = raw_std  # * 4
 
-        self.W = np.random.normal(
-            0, init_std, (self.num_input, self.num_output))
+        self.W = np.random.normal(0, init_std, (self.num_input, self.num_output))
         self.b = np.random.normal(0, init_std, (1, self.num_output))
