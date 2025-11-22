@@ -3,3 +3,4 @@ a1/MNIST_data/
 __pycache__/
 data/
 *.zip
+kaggle.json
