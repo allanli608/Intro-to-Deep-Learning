@@ -1,0 +1,24 @@
+name: hw4-local-cpu
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.8
+  - ipykernel
+  - ipywidgets
+  - pip
+  - pip:
+    # CPU-only versions for PyTorch 1.8.0 ecosystem
+    - torch==1.8.0+cpu
+    - torchvision==0.9.0+cpu
+    - torchaudio==0.8.0
+    - torchtext==0.9.0
+    - nltk
+    # Standard utilities likely needed for data manipulation/plotting
+    - numpy
+    - matplotlib
+    - tqdm 
+    - prettytable
+    # Use the official PyTorch wheel index for CPU versions
+    - --find-links https://download.pytorch.org/whl/torch_stable.html
