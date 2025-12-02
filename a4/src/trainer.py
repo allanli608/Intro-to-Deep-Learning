@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm.notebook import tqdm
 from prettytable import PrettyTable  # Use PrettyTable for tabular formatting
+import os
 
 class Trainer:
     def __init__(self, model, device):
@@ -54,7 +55,7 @@ class Trainer:
                 
         return epoch_loss / len(iterator), epoch_acc / len(iterator)
 
-    def run_experiment(self, train_iter, val_iter, test_iter=None, epochs=10, lr=1e-3, name="Experiment", hyperparameters=None):
+    def run_experiment(self, train_iter, val_iter, test_iter=None, epochs=10, lr=1e-3, name="Experiment", hyperparameters=None, save_weights=False):
         """
         Runs the experiment with training, validation, and optional testing.
         Allows passing hyperparameters (dict) for reporting.
@@ -109,6 +110,10 @@ class Trainer:
             # Load best model for testing
             self.model.load_state_dict(torch.load(f'{name}_best.pt'))
             test_loss, test_acc = self.evaluate(test_iter, criterion)
+        
+        if not save_weights:
+            # Remove saved weights if not needed
+            os.remove(f'{name}_best.pt')
 
         # Print final comprehensive summary table
         self.print_experiment_summary(name, total_time, self.count_parameters(), hyperparameters, history, test_loss, test_acc)
