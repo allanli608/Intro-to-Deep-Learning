@@ -3,30 +3,33 @@ from torchtext.legacy import data, datasets
 from torchtext.vocab import Vectors
 import os
 
+
 class SSTDataPipeline:
     def __init__(self, vector_path=None, batch_size=64, device=None):
         """
         Args:
-            vector_path (str, optional): Path to pre-trained vectors (e.g., 'vector.txt'). 
+            vector_path (str, optional): Path to pre-trained vectors (e.g., 'vector.txt').
                                          If None, random embeddings are used.
             batch_size (int): Batch size for iterators.
             device (torch.device): Device to place tensors on.
         """
         self.batch_size = batch_size
-        self.device = device if device else torch.device('cpu')
+        self.device = device if device else torch.device("cpu")
         self.vector_path = vector_path
-        
+
         # Define Fields
         # include_lengths is needed for packed padded sequences
         self.TEXT = data.Field(lower=True, include_lengths=True, batch_first=True)
-        self.LABEL = data.Field(sequential=False, dtype=torch.long, preprocessing=lambda x: int(x) - 1)
+        self.LABEL = data.Field(
+            sequential=False, dtype=torch.long, preprocessing=lambda x: int(x) - 1
+        )
 
         self.train_data = None
         self.val_data = None
         self.test_data = None
         self.vocab_size = 0
         self.output_dim = 0
-        
+
     def run(self):
         """Executes the full loading pipeline."""
         self._load_data()
@@ -41,14 +44,16 @@ class SSTDataPipeline:
 
     def _build_vocab(self):
         print("--> Building Vocabulary...")
-        
+
         if self.vector_path:
             # Logic for Pre-trained Embeddings
             print(f"    Loading specific vectors: {self.vector_path}")
             try:
                 # Check paths (local or ./data/)
-                if os.path.exists(self.vector_path) or os.path.exists(f"./data/{self.vector_path}"):
-                    vectors = Vectors(name=self.vector_path, cache='./data')
+                if os.path.exists(self.vector_path) or os.path.exists(
+                    f"./data/{self.vector_path}"
+                ):
+                    vectors = Vectors(name=self.vector_path, cache="./data")
                     self.TEXT.build_vocab(self.train_data, vectors=vectors)
                     print(f"    Success: Vocab built with '{self.vector_path}'")
                 else:
@@ -63,10 +68,10 @@ class SSTDataPipeline:
             # Logic for Random Embeddings (Default)
             print("    No vector_path provided. Initializing random embeddings.")
             self.TEXT.build_vocab(self.train_data)
-            
+
         # Build label vocab
         self.LABEL.build_vocab(self.train_data)
-        
+
         self.vocab_size = len(self.TEXT.vocab)
         self.output_dim = len(self.LABEL.vocab)
         print(f"    Vocab Size: {self.vocab_size}")
@@ -78,13 +83,13 @@ class SSTDataPipeline:
             batch_size=self.batch_size,
             sort_key=lambda x: len(x.text),
             sort_within_batch=True,
-            device=self.device
+            device=self.device,
         )
 
     def get_embeddings(self):
         if self.TEXT.vocab.vectors is not None:
             return self.TEXT.vocab.vectors
         return None
-    
+
     def get_pad_idx(self):
         return self.TEXT.vocab.stoi[self.TEXT.pad_token]

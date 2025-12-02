@@ -20,5 +20,6 @@ dependencies:
     - matplotlib
     - tqdm 
     - prettytable
+    - black
     # Use the official PyTorch wheel index for CPU versions
     - --find-links https://download.pytorch.org/whl/torch_stable.html
