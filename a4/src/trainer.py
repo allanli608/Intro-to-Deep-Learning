@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import time
-import numpy as np
 import os
 
 
@@ -63,12 +62,6 @@ class Trainer:
         hyperparameters=None,
         save_weights=True,
     ):
-        """
-        Runs the training loop.
-        Returns:
-            history: dict containing lists of loss/acc per epoch
-            summary: dict containing scalar metrics for final reporting
-        """
         optimizer = optim.Adam(self.model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss().to(self.device)
 
@@ -78,11 +71,11 @@ class Trainer:
 
         print(f"Starting {name} | Params: {self.count_parameters():,}")
 
-        # Initialize summary dict with metadata
+        # Metadata for summary
         if hyperparameters is None:
             hyperparameters = {}
         summary = {
-            "Model Name": name,
+            "Model": name,
             "Parameters": self.count_parameters(),
             **hyperparameters,
         }
@@ -99,7 +92,6 @@ class Trainer:
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss
                 if save_weights:
-                    # Create directory if it doesn't exist
                     os.makedirs("./trained_weights", exist_ok=True)
                     torch.save(
                         self.model.state_dict(), f"./trained_weights/{name}_best.pt"
@@ -110,18 +102,18 @@ class Trainer:
             history["val_loss"].append(valid_loss)
             history["val_acc"].append(valid_acc)
 
-            print(f"Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s")
-            print(f"\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%")
-            print(f"\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%")
+            print(
+                f"  Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Loss: {train_loss:.3f} | Val Loss: {valid_loss:.3f}"
+            )
 
         total_time = time.time() - total_start_time
 
-        # Populate final summary metrics
-        summary["Training Time (s)"] = round(total_time, 2)
-        summary["Final Train Loss"] = round(history["train_loss"][-1], 4)
-        summary["Final Train Acc"] = round(history["train_acc"][-1], 4)
-        summary["Final Val Loss"] = round(history["val_loss"][-1], 4)
-        summary["Final Val Acc"] = round(history["val_acc"][-1], 4)
+        # Add final metrics to summary
+        summary["Time (s)"] = round(total_time, 2)
+        summary["Train Loss"] = round(history["train_loss"][-1], 4)
+        summary["Train Acc"] = round(history["train_acc"][-1], 4)
+        summary["Val Loss"] = round(history["val_loss"][-1], 4)
+        summary["Val Acc"] = round(history["val_acc"][-1], 4)
         summary["Best Val Loss"] = round(min(history["val_loss"]), 4)
         summary["Best Val Acc"] = round(max(history["val_acc"]), 4)
 
