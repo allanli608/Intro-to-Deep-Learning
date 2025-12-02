@@ -27,8 +27,15 @@ class Trainer:
             optimizer.zero_grad()
             text, text_lengths = batch.text
             predictions = self.model(text, text_lengths)
-            loss = criterion(predictions, batch.label)
-            acc = self.calculate_accuracy(predictions, batch.label)
+
+            # FIX: Explicitly shift labels from [1,5] to [0,4]
+            # Check if labels are 1-indexed before shifting to avoid double shifting
+            labels = batch.label
+            if labels.min() >= 1:
+                labels = labels - 1
+
+            loss = criterion(predictions, labels)
+            acc = self.calculate_accuracy(predictions, labels)
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item()
@@ -45,8 +52,14 @@ class Trainer:
             for batch in iterator:
                 text, text_lengths = batch.text
                 predictions = self.model(text, text_lengths)
-                loss = criterion(predictions, batch.label)
-                acc = self.calculate_accuracy(predictions, batch.label)
+
+                # FIX: Explicitly shift labels from [1,5] to [0,4]
+                labels = batch.label
+                if labels.min() >= 1:
+                    labels = labels - 1
+
+                loss = criterion(predictions, labels)
+                acc = self.calculate_accuracy(predictions, labels)
                 epoch_loss += loss.item()
                 epoch_acc += acc.item()
 
@@ -61,6 +74,7 @@ class Trainer:
         name="Experiment",
         hyperparameters=None,
         save_weights=True,
+        save_dir="./trained_weights",
     ):
         optimizer = optim.Adam(self.model.parameters(), lr=lr)
         criterion = nn.CrossEntropyLoss().to(self.device)
@@ -92,9 +106,11 @@ class Trainer:
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss
                 if save_weights:
-                    os.makedirs("./trained_weights", exist_ok=True)
+                    # Use the save_dir variable
+                    os.makedirs(save_dir, exist_ok=True)
                     torch.save(
-                        self.model.state_dict(), f"./trained_weights/{name}_best.pt"
+                        self.model.state_dict(),
+                        os.path.join(save_dir, f"{name}_best.pt"),
                     )
 
             history["train_loss"].append(train_loss)
@@ -116,6 +132,10 @@ class Trainer:
         summary["Val Acc"] = round(history["val_acc"][-1], 4)
         summary["Best Val Loss"] = round(min(history["val_loss"]), 4)
         summary["Best Val Acc"] = round(max(history["val_acc"]), 4)
+
+        print(
+            f"Experiement Complete with Train Accuracy: {summary['Train Acc']}, Val Accuracy: {summary['Val Acc']}"
+        )
 
         return history, summary
 
