@@ -7,6 +7,7 @@ dependencies:
   - python=3.8
   - ipykernel
   - ipywidgets
+  - pandas
   - pip
   - pip:
     # CPU-only versions for PyTorch 1.8.0 ecosystem
