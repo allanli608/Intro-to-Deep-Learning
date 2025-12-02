@@ -31,9 +31,6 @@ class Trainer:
             # FIX: Explicitly shift labels from [1,5] to [0,4]
             # Check if labels are 1-indexed before shifting to avoid double shifting
             labels = batch.label
-            if labels.min() >= 1:
-                labels = labels - 1
-
             loss = criterion(predictions, labels)
             acc = self.calculate_accuracy(predictions, labels)
             loss.backward()
@@ -55,9 +52,6 @@ class Trainer:
 
                 # FIX: Explicitly shift labels from [1,5] to [0,4]
                 labels = batch.label
-                if labels.min() >= 1:
-                    labels = labels - 1
-
                 loss = criterion(predictions, labels)
                 acc = self.calculate_accuracy(predictions, labels)
                 epoch_loss += loss.item()
@@ -119,7 +113,7 @@ class Trainer:
             history["val_acc"].append(valid_acc)
 
             print(
-                f"  Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Loss: {train_loss:.3f} | Val Loss: {valid_loss:.3f}"
+                f"  Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Accuracy: {train_acc:.3f} | Val Accuracy: {valid_acc:.3f}"
             )
 
         total_time = time.time() - total_start_time

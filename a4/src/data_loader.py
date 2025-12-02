@@ -6,23 +6,15 @@ import os
 
 class SSTDataPipeline:
     def __init__(self, vector_path=None, batch_size=64, device=None):
-        """
-        Args:
-            vector_path (str, optional): Path to pre-trained vectors (e.g., 'vector.txt').
-                                         If None, random embeddings are used.
-            batch_size (int): Batch size for iterators.
-            device (torch.device): Device to place tensors on.
-        """
         self.batch_size = batch_size
         self.device = device if device else torch.device("cpu")
         self.vector_path = vector_path
 
-        # Define Fields
-        # include_lengths is needed for packed padded sequences
         self.TEXT = data.Field(lower=True, include_lengths=True, batch_first=True)
-        self.LABEL = data.Field(
-            sequential=False, dtype=torch.long, preprocessing=lambda x: int(x) - 1
-        )
+
+        # FIX: Remove 'preprocessing' and 'use_vocab=False'
+        # We let it build a vocab, but we will control the order.
+        self.LABEL = data.Field(sequential=False, dtype=torch.long)
 
         self.train_data = None
         self.val_data = None
@@ -31,7 +23,6 @@ class SSTDataPipeline:
         self.output_dim = 0
 
     def run(self):
-        """Executes the full loading pipeline."""
         self._load_data()
         self._build_vocab()
         return self._get_iterators()
@@ -45,11 +36,10 @@ class SSTDataPipeline:
     def _build_vocab(self):
         print("--> Building Vocabulary...")
 
+        # 1. Build Text Vocab (Same as before)
         if self.vector_path:
-            # Logic for Pre-trained Embeddings
             print(f"    Loading specific vectors: {self.vector_path}")
             try:
-                # Check paths (local or ./data/)
                 if os.path.exists(self.vector_path) or os.path.exists(
                     f"./data/{self.vector_path}"
                 ):
@@ -57,23 +47,44 @@ class SSTDataPipeline:
                     self.TEXT.build_vocab(self.train_data, vectors=vectors)
                     print(f"    Success: Vocab built with '{self.vector_path}'")
                 else:
-                    print(f"    Error: '{self.vector_path}' not found.")
-                    print("    Falling back to random initialization.")
+                    print(f"    Error: '{self.vector_path}' not found. Using random.")
                     self.TEXT.build_vocab(self.train_data)
             except Exception as e:
-                print(f"    Error loading vectors: {e}")
-                print("    Falling back to random initialization.")
+                print(f"    Error loading vectors: {e}. Using random.")
                 self.TEXT.build_vocab(self.train_data)
         else:
-            # Logic for Random Embeddings (Default)
             print("    No vector_path provided. Initializing random embeddings.")
             self.TEXT.build_vocab(self.train_data)
 
-        # Build label vocab
+        # 2. FIX: Manually build Label Vocab to ensure 0=Very Negative, 4=Very Positive
+        # Note: TorchText often pads, but since sequential=False, it shouldn't produce a <pad> token
+        # unless specified. However, we simply build it from the data to be safe.
         self.LABEL.build_vocab(self.train_data)
+
+        # CRITICAL: Overwrite the stoi (string-to-index) dictionary to force your order
+        # This maps the text label to the integer index you want.
+        custom_stoi = {
+            "very negative": 0,
+            "negative": 1,
+            "neutral": 2,
+            "positive": 3,
+            "very positive": 4,
+        }
+        self.LABEL.vocab.stoi = custom_stoi
+        # We also need to update itos (index-to-string) to match
+        self.LABEL.vocab.itos = [
+            "very negative",
+            "negative",
+            "neutral",
+            "positive",
+            "very positive",
+        ]
 
         self.vocab_size = len(self.TEXT.vocab)
         self.output_dim = len(self.LABEL.vocab)
+
+        # VERIFICATION
+        print(f"    Label Mapping: {self.LABEL.vocab.stoi}")
         print(f"    Vocab Size: {self.vocab_size}")
 
     def _get_iterators(self):
@@ -86,10 +97,9 @@ class SSTDataPipeline:
             device=self.device,
         )
 
+    # Helper methods remain the same...
     def get_embeddings(self):
-        if self.TEXT.vocab.vectors is not None:
-            return self.TEXT.vocab.vectors
-        return None
+        return self.TEXT.vocab.vectors
 
     def get_pad_idx(self):
         return self.TEXT.vocab.stoi[self.TEXT.pad_token]
