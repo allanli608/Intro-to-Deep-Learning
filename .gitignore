@@ -2,5 +2,7 @@
 a1/MNIST_data/
 __pycache__/
 data/
+.data/
 *.zip
 kaggle.json
+trained_weights/
