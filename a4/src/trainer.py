@@ -67,6 +67,15 @@ class Trainer:
 
         return epoch_loss / len(iterator), epoch_acc / len(iterator)
 
+    def evaluate_model(self, test_iterator):
+        """
+        Standalone wrapper to evaluate a model on a dataset.
+        """
+        criterion = nn.CrossEntropyLoss().to(self.device)
+        trainer = Trainer(self.model, self.device)
+        loss, acc = trainer.evaluate(test_iterator, criterion)
+        return loss, acc
+
     def run_experiment(
         self,
         train_iter,
