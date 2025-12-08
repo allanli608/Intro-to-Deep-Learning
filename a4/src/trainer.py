@@ -25,16 +25,22 @@ class Trainer:
 
         for batch in iterator:
             optimizer.zero_grad()
-            text, text_lengths = batch.text
+
+            # --- FIX: Access attributes from Batch dataclass ---
+            text = batch.text
+            text_lengths = batch.lengths
+
+            # --- FIX: Shift Labels from [1,5] to [0,4] ---
+            labels = batch.label - 1
+
             predictions = self.model(text, text_lengths)
 
-            # FIX: Explicitly shift labels from [1,5] to [0,4]
-            # Check if labels are 1-indexed before shifting to avoid double shifting
-            labels = batch.label
             loss = criterion(predictions, labels)
             acc = self.calculate_accuracy(predictions, labels)
+
             loss.backward()
             optimizer.step()
+
             epoch_loss += loss.item()
             epoch_acc += acc.item()
 
@@ -47,13 +53,15 @@ class Trainer:
 
         with torch.no_grad():
             for batch in iterator:
-                text, text_lengths = batch.text
+                text = batch.text
+                text_lengths = batch.lengths
+                labels = batch.label - 1
+
                 predictions = self.model(text, text_lengths)
 
-                # FIX: Explicitly shift labels from [1,5] to [0,4]
-                labels = batch.label
                 loss = criterion(predictions, labels)
                 acc = self.calculate_accuracy(predictions, labels)
+
                 epoch_loss += loss.item()
                 epoch_acc += acc.item()
 
@@ -79,7 +87,6 @@ class Trainer:
 
         print(f"Starting {name} | Params: {self.count_parameters():,}")
 
-        # Metadata for summary
         if hyperparameters is None:
             hyperparameters = {}
         summary = {
@@ -100,7 +107,6 @@ class Trainer:
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss
                 if save_weights:
-                    # Use the save_dir variable
                     os.makedirs(save_dir, exist_ok=True)
                     torch.save(
                         self.model.state_dict(),
@@ -113,11 +119,10 @@ class Trainer:
             history["val_acc"].append(valid_acc)
 
             print(
-                f"  Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Accuracy: {train_acc:.3f} | Val Accuracy: {valid_acc:.3f}"
+                f"  Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Acc: {train_acc:.3f} | Val Acc: {valid_acc:.3f}"
             )
 
         total_time = time.time() - total_start_time
-
         # Add final metrics to summary
         summary["Time (s)"] = round(total_time, 2)
         summary["Train Loss"] = round(history["train_loss"][-1], 4)
@@ -130,7 +135,6 @@ class Trainer:
         print(
             f"Experiement Complete with Train Accuracy: {summary['Train Acc']}, Val Accuracy: {summary['Val Acc']}"
         )
-
         return history, summary
 
     def epoch_time(self, start_time, end_time):
