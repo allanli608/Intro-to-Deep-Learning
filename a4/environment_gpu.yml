@@ -1,24 +1,19 @@
-name: hw4
+name: dl_env
 channels:
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free
+  - pytorch
+  - nvidia
   - defaults
 dependencies:
-  - python=3.8
-  - pandas
+  - python=3.10
   - pip
+  # Core PyTorch libs with CUDA 12.4 support
+  - matplotlib
+  - pandas
   - pip:
-    # The -f flag tells pip where to find the specific CUDA wheels
-    - --find-links https://download.pytorch.org/whl/torch_stable.html
-    # The -i flag forces the Tsinghua mirror for the standard packages
-    - --index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
-    
-    # Core GPU Libraries
-    - torch==1.8.0+cu111
-    - torchvision==0.9.0+cu111
-    - torchaudio==0.8.0
-    - torchtext==0.9.0
-    - nltk
-    - numpy
-    - matplotlib
+    # Any specific pip-only packages
+    - pytorch
     - tqdm
-    - prettytable
-    - black
+    - ipykernel
