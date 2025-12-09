@@ -1,5 +1,0 @@
-Model,Type,BiDir,Embeds,Best Val Acc,Best Val Loss,Time (s),Parameters,Layers,Train Loss,Train Acc,Val Loss,Val Acc
-Baseline_Winner,LSTM,True,Pretrained,0.4623,1.2657,24.2,2722309,2,0.7654,0.686,1.5948,0.4258
-FineTuned_Embeddings,LSTM,True,Pretrained,0.4707,1.2423,24.28,2722309,2,0.7745,0.6888,1.4621,0.4398
-Attention_Frozen,LSTM,True,Pretrained,0.4811,1.2368,24.01,2722309,2,0.7776,0.6819,1.4778,0.4456
-Best_Model_Full_Opt,LSTM,True,Pretrained,0.4786,1.2555,24.09,2722309,2,0.7822,0.6774,1.437,0.4346
