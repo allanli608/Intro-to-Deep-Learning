@@ -195,7 +195,7 @@ def parse_tree_examples(
                 words.append(tokens[index])
                 index += 1
 
-        index += 1  # consume ')'
+        index += 1
         return label, words
 
     label, words = parse_node()
@@ -288,20 +288,15 @@ def make_collate_fn(
         return torch.tensor(indices, dtype=torch.long)
 
     def collate(batch: Sequence[SSTExample]) -> Batch:
-        # --- FIX 1: Sort batch by text length (descending) ---
-        # This satisfies 'lengths array must be sorted in decreasing order'
-        batch = sorted(batch, key=lambda x: len(x.text), reverse=True)
 
+        batch = sorted(batch, key=lambda x: len(x.text), reverse=True)
         text_tensors = [numericalize(example.text) for example in batch]
 
-        # Calculate lengths (Must stay on CPU)
         lengths = torch.tensor(
             [tensor.size(0) for tensor in text_tensors], dtype=torch.long
         )
 
-        # --- FIX 2: batch_first=True for correct shape ---
         padded = pad_sequence(text_tensors, batch_first=True, padding_value=pad_idx)
-
         labels = torch.tensor(
             [label_field.vocab.stoi.get(example.label, 0) for example in batch],
             dtype=label_field.dtype,
@@ -309,7 +304,7 @@ def make_collate_fn(
 
         return Batch(
             text=padded.to(device),
-            lengths=lengths,  # Keep on CPU
+            lengths=lengths,
             label=labels.to(device),
         )
 
@@ -340,18 +335,9 @@ def build_iterators(
     return tuple(loaders)
 
 
-################################
-# DataLoader
-################################
-
-
 def get_sst_data_loaders(batch_size=64, vector_path="./data/vector.txt", device="cpu"):
-    """
-    Wrapper function to initialize fields, load data, build vocab, and return iterators.
-    """
     print("--> Initializing Fields...")
     TEXT = SimpleField()
-    # Note: Labels in this dataset are 1-5. We handle the shift in the Trainer.
     LABEL = SimpleField(
         sequential=False, dtype=torch.long, pad_token=None, unk_token=UNK_TOKEN
     )
@@ -366,9 +352,6 @@ def get_sst_data_loaders(batch_size=64, vector_path="./data/vector.txt", device=
     print("--> Building Vocabulary...")
     TEXT.build_vocab(train, vectors_path=vector_path)
     LABEL.build_vocab(train)
-
-    # Force the label mapping to be consistent just in case
-    # This ensures 1=very negative, 5=very positive (which we shift to 0-4 later)
     LABEL.vocab.stoi = {
         "very negative": 1,
         "negative": 2,

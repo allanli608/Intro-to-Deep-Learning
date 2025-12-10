@@ -4,9 +4,6 @@ import matplotlib.pyplot as plt
 class Plotter:
     @staticmethod
     def plot_history(history, title):
-        """
-        Plots training and validation loss and accuracy from a history dictionary.
-        """
         epochs = range(1, len(history["train_loss"]) + 1)
         fig, ax = plt.subplots(1, 2, figsize=(12, 4))
 

@@ -25,12 +25,8 @@ class Trainer:
 
         for batch in iterator:
             optimizer.zero_grad()
-
-            # --- FIX: Access attributes from Batch dataclass ---
             text = batch.text
             text_lengths = batch.lengths
-
-            # --- FIX: Shift Labels from [1,5] to [0,4] ---
             labels = batch.label - 1
 
             predictions = self.model(text, text_lengths)
@@ -68,9 +64,6 @@ class Trainer:
         return epoch_loss / len(iterator), epoch_acc / len(iterator)
 
     def evaluate_model(self, test_iterator):
-        """
-        Standalone wrapper to evaluate a model on a dataset.
-        """
         criterion = nn.CrossEntropyLoss().to(self.device)
         trainer = Trainer(self.model, self.device)
         loss, acc = trainer.evaluate(test_iterator, criterion)
@@ -132,7 +125,7 @@ class Trainer:
             )
 
         total_time = time.time() - total_start_time
-        # Add final metrics to summary
+
         summary["Time (s)"] = round(total_time, 2)
         summary["Train Loss"] = round(history["train_loss"][-1], 4)
         summary["Train Acc"] = round(history["train_acc"][-1], 4)
