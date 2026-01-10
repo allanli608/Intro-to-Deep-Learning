@@ -148,7 +148,15 @@ def compute_advantages_grpo(rewards, group_size=4):
     # ========================================================================
     # TODO 2: Implement GRPO advantage computation
     # ========================================================================
+    rewards_grouped = rewards.view(-1, group_size)
 
+    group_means = rewards_grouped.mean(dim=1, keepdim=True)
+    group_stds = rewards_grouped.std(dim=1, keepdim=True)
+    if group_stds.eq(0).any():
+        group_stds = group_stds + 1e-8  # Prevent division by zero
+    advantages_grouped = (rewards_grouped - group_means) / group_stds
+
+    advantages = advantages_grouped.flatten()
     # END TODO 2
     # ========================================================================
 
@@ -172,7 +180,12 @@ def compute_policy_loss(logprobs, old_logprobs, advantages, loss_mask, clip_eps=
     # ========================================================================
     # TODO 3: Implement PPO-style policy loss
     # ========================================================================
-
+    ratio = torch.exp(logprobs - old_logprobs)
+    advantages = advantages.unsqueeze(1)
+    surr1 = ratio * advantages
+    surr2 = torch.clamp(ratio, 1.0 - clip_eps, 1.0 + clip_eps) * advantages
+    clipped_objective = torch.min(surr1, surr2)
+    loss = -(clipped_objective * loss_mask).sum() / (loss_mask.sum() + 1e-8)
     # END TODO 3
     # ========================================================================
 
@@ -257,7 +270,20 @@ def compute_logprobs_from_model(model, input_ids, attention_mask):
     # ========================================================================
     # TODO 4: Compute log probabilities
     # ========================================================================
+    outputs = model(input_ids, attention_mask=attention_mask)
+    logits = outputs.logits
 
+    shift_logits = logits[..., :-1, :].contiguous()
+    shift_labels = input_ids[..., 1:].contiguous()
+
+    log_probs = F.log_softmax(shift_logits, dim=-1)
+
+    selected_logprobs = log_probs.gather(
+        dim=-1, index=shift_labels.unsqueeze(-1)
+    ).squeeze(-1)
+
+    prefix = torch.zeros(input_ids.shape[0], 1, device=input_ids.device)
+    logprobs = torch.cat([prefix, selected_logprobs], dim=1)
     # END TODO 4
     # ========================================================================
 
@@ -311,7 +337,49 @@ def train_grpo(
             # ====================================================================
             # TODO 5: Implement the GRPO training step
             # ====================================================================
+            generation_output = generate_completions(
+                model,
+                tokenizer,
+                input_ids,
+                attention_mask,
+                max_new_tokens=max_new_tokens,
+                num_samples=group_size,
+            )
 
+            completion_ids = generation_output["output_ids"]
+            completions = generation_output["completions"]
+            prompt_length = generation_output["prompt_length"]
+
+            flat_answers = []
+            for ans in answers:
+                flat_answers.extend([ans] * group_size)
+
+            rewards = compute_reward(completions, flat_answers).to(device)
+            advantages = compute_advantages_grpo(rewards, group_size)
+
+            completion_mask = (
+                (completion_ids != tokenizer.pad_token_id).long().to(device)
+            )
+
+            with torch.no_grad():
+                old_logprobs = compute_logprobs_from_model(
+                    model, completion_ids, completion_mask
+                )
+
+            optimizer.zero_grad()
+            logprobs = compute_logprobs_from_model(
+                model, completion_ids, completion_mask
+            )
+
+            loss_mask = completion_mask.clone()
+            loss_mask[:, :prompt_length] = 0
+
+            loss = compute_policy_loss(
+                logprobs, old_logprobs, advantages, loss_mask, clip_eps
+            )
+
+            loss.backward()
+            optimizer.step()
             # END TODO 5
             # ====================================================================
 
