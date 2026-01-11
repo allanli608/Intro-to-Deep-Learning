@@ -7,3 +7,6 @@ data/
 kaggle.json
 trained_weights/
 poster/
+venv/
+Qwen2.5-1.5B-Instruct/
+saved_model/

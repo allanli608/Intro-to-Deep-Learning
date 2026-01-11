@@ -419,8 +419,9 @@ def main():
     model_path = sys.argv[1]
     print(model_path)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("Training on device:", device)
     batch_size = 2  # Small batch size for homework
-    group_size = 8  # Number of samples per prompt
+    group_size = 4  # Number of samples per prompt
     num_epochs = 5
     learning_rate = 5e-6
     max_new_tokens = 128
@@ -439,28 +440,32 @@ def main():
         trust_remote_code=True,
     )
 
+    model.gradient_checkpointing_enable()
+
     print("Loading dataset...")
     train_dataset = GSM8KDataset(
         split="train[:100]", tokenizer=tokenizer
     )  # Use small subset
+
+    def collate_fn(batch):
+        # Prepare list of dicts for the tokenizer
+        features = [{"input_ids": item["input_ids"], "attention_mask": item["attention_mask"]} for item in batch]
+        
+        # Pad dynamically to the longest item in the batch
+        batch_features = tokenizer.pad(features, padding=True, return_tensors="pt")
+        
+        return {
+            "input_ids": batch_features["input_ids"],
+            "attention_mask": batch_features["attention_mask"],
+            "prompt": [item["prompt"] for item in batch],
+            "answer": [item["answer"] for item in batch],
+        }
+    
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
         shuffle=True,
-        collate_fn=lambda x: {
-            "input_ids": torch.nn.utils.rnn.pad_sequence(
-                [item["input_ids"] for item in x],
-                batch_first=True,
-                padding_value=tokenizer.pad_token_id,
-            ),
-            "attention_mask": torch.nn.utils.rnn.pad_sequence(
-                [item["attention_mask"] for item in x],
-                batch_first=True,
-                padding_value=0,
-            ),
-            "prompt": [item["prompt"] for item in x],
-            "answer": [item["answer"] for item in x],
-        },
+        collate_fn=collate_fn
     )
 
     print("Setting up optimizer...")
